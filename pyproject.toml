@@ -1,0 +1,9 @@
+[project]
+name = "drt-api"
+version = "0.1.0"
+description = "Displays disaster/incidents reported by People/Rescue teams sorted by urgency/severity."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+]
