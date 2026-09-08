@@ -1,49 +1,49 @@
-from fastapi import FastAPI , Response , status , HTTPException
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from pydantic import BaseModel, Field
+from fastapi import FastAPI , Response , status , HTTPException , Depends
+from pydantic import BaseModel, Field , ConfigDict
 from datetime import datetime
+from .database import Base, Session, engine , get_db
+from . import models
 
-from os import getenv
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-try :
-    conn = psycopg2.connect(host=getenv('hostname') , database=getenv('db_name') , user=getenv('username') , password=getenv('password') , cursor_factory=RealDictCursor)
-    cur = conn.cursor()
-    print("DB connection successfull!")
-except Exception as error:
-    print("DB connection failed!")
-    print(f"Error:{error}")
-
 
 class Incident(BaseModel):
-    id : int
+    incident_id : int
     type : str
     description : str
     severity : str
     reported_at : datetime = Field(default_factory=datetime.now)
     published : bool
     
-class Incident_post(BaseModel):
+class Incident_create(BaseModel):
     type : str
     description : str
     severity : str
     published : bool
+
+class IncidentUpdate(Incident_create):
+    pass
+class IncidentResponse(Incident):
+    incident_id: int
+    reported_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 @app.get("/")
 def home():
     return {"msg":"Welcome!"}
 
 @app.get("/incidents")
-def read_incidents():
-    cur.execute('''SELECT * FROM incidents''')
-    incidents = cur.fetchall()
+def read_incidents(db : Session = Depends(get_db)):
+    incidents = db.query(models.Incident).all()
     return incidents
 
 @app.get("/incidents/{incident_id}")
-def read_incident(incident_id : int):
-    cur.execute("""SELECT * FROM incidents WHERE incident_id = %s""" , (incident_id ,))
-    matching_incident = cur.fetchone()
+def read_incident(incident_id : int , db : Session = Depends(get_db) ):
+
+    matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
     if not matching_incident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail=f"No incident found with id : {incident_id}")
@@ -52,69 +52,45 @@ def read_incident(incident_id : int):
 
 
 @app.post("/incident", status_code=status.HTTP_201_CREATED)
-def post_incident(incident: Incident_post):
-    incident_dict = incident.model_dump()
+def post_incident(incident: Incident_create ,  db : Session = Depends(get_db)):
 
-    cur.execute(
-        """
-        INSERT INTO incidents (type, description, severity,published)
-        VALUES (%s, %s, %s , %s)
-        """,
-        (
-            incident_dict["type"],
-            incident_dict["description"],
-            incident_dict["severity"],
-            incident_dict["published"],
-        ),
-    )
-    conn.commit()
-
-    return incident_dict
+    new_incident = models.Incident(**incident.model_dump())
+    db.add(new_incident)
+    db.commit()
+    db.refresh(new_incident)
+    return new_incident
 
 
 @app.put("/incidents/{incident_id}")
-def update_incident(incident_id: int, updated_incident: Incident_post):
+def update_incident(incident_id: int, updated_incident: Incident_create ,  db : Session = Depends(get_db)):
     incident_dict = updated_incident.model_dump()
 
-    cur.execute(
-        """
-        UPDATE incidents
-        SET type = %s, description = %s, severity = %s, published = %s
-        WHERE incident_id = %s
-        RETURNING incident_id, type, description, severity, published
-        """,
-        (
-            incident_dict["type"],
-            incident_dict["description"],
-            incident_dict["severity"],
-            incident_dict["published"],
-            incident_id,
-        )
-    )
-    updated = cur.fetchone()
-    conn.commit()
+    matching_incident_query = db.query(models.Incident).filter(models.Incident.incident_id == incident_id)
 
-    if not updated:
+    incident = matching_incident_query.first()
+
+    if not incident:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No incident found with id: {incident_id}",
         )
 
-    return updated
+    matching_incident_query.update(
+        incident_dict,  synchronize_session=False
+    )
+    db.commit()
+    db.refresh(incident)
+    return matching_incident_query.first()
 
 @app.delete("/incidents/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_incident(incident_id: int):
-    cur.execute(
-        "DELETE FROM incidents WHERE incident_id = %s RETURNING incident_id",
-        (incident_id,),
-    )
-    deleted = cur.fetchone()
-    conn.commit()
+def delete_incident(incident_id: int ,  db : Session = Depends(get_db)):
+    matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
-    if not deleted:
+    if not matching_incident:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No incident found with id: {incident_id}",
         )
-
+    db.delete(matching_incident)
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
