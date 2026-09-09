@@ -1,46 +1,24 @@
-from fastapi import FastAPI , Response , status , HTTPException , Depends
-from pydantic import BaseModel, Field , ConfigDict
-from datetime import datetime
-from .database import Base, Session, engine , get_db
-from . import models
+from typing import List
 
-Base.metadata.create_all(bind=engine)
+from fastapi import FastAPI , Response , status , HTTPException , Depends
+from .database import Session, engine , get_db
+from . import models , schemas
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
-
-class Incident(BaseModel):
-    incident_id : int
-    type : str
-    description : str
-    severity : str
-    reported_at : datetime = Field(default_factory=datetime.now)
-    published : bool
-    
-class Incident_create(BaseModel):
-    type : str
-    description : str
-    severity : str
-    published : bool
-
-class IncidentUpdate(Incident_create):
-    pass
-class IncidentResponse(Incident):
-    incident_id: int
-    reported_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 @app.get("/")
 def home():
     return {"msg":"Welcome!"}
 
-@app.get("/incidents")
+@app.get("/incidents", response_model=List[schemas.IncidentResponse])
 def read_incidents(db : Session = Depends(get_db)):
     incidents = db.query(models.Incident).all()
     return incidents
 
-@app.get("/incidents/{incident_id}")
+@app.get("/incidents/{incident_id}" , response_model=schemas.IncidentResponse)
 def read_incident(incident_id : int , db : Session = Depends(get_db) ):
 
     matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
@@ -52,7 +30,7 @@ def read_incident(incident_id : int , db : Session = Depends(get_db) ):
 
 
 @app.post("/incident", status_code=status.HTTP_201_CREATED)
-def post_incident(incident: Incident_create ,  db : Session = Depends(get_db)):
+def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db)):
 
     new_incident = models.Incident(**incident.model_dump())
     db.add(new_incident)
@@ -61,8 +39,8 @@ def post_incident(incident: Incident_create ,  db : Session = Depends(get_db)):
     return new_incident
 
 
-@app.put("/incidents/{incident_id}")
-def update_incident(incident_id: int, updated_incident: Incident_create ,  db : Session = Depends(get_db)):
+@app.put("/incidents/{incident_id}" ,response_model=schemas.IncidentResponse)
+def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,  db : Session = Depends(get_db)):
     incident_dict = updated_incident.model_dump()
 
     matching_incident_query = db.query(models.Incident).filter(models.Incident.incident_id == incident_id)

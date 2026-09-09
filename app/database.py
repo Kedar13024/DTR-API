@@ -1,24 +1,27 @@
 from os import getenv
-from sqlalchemy import create_engine 
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker , Session
+from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
-POSTGRES_USER = getenv('user')
-POSTGRES_PASSWORD = getenv('password')
-POSTGRES_HOST = getenv('host')
-POSTGRES_PORT = getenv('port')
-POSTGRES_DB = getenv('db')
+load_dotenv()
 
-SQLALCHEMY_DATABASE_URL = f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}'
+POSTGRES_USER = getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = getenv("POSTGRES_HOST")
+POSTGRES_PORT = getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = getenv("POSTGRES_DB")
+
+SQLALCHEMY_DATABASE_URL = f'postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}'
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-Sessionlocal = sessionmaker(autocommit=False,autoflush=False , bind=engine)
+SessionLocal = sessionmaker(autocommit=False,autoflush=False , bind=engine)
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 def get_db():
-    db = Sessionlocal()
+    db = SessionLocal()
     try:
         yield db
     finally:
