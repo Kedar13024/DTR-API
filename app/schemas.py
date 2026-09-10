@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import datetime
 
 class Incident_base(BaseModel):
@@ -14,8 +14,20 @@ class IncidentUpdate(Incident_base):
     pass
 
 class IncidentResponse(Incident_base):
+
+    model_config=ConfigDict(from_attributes = True)
+
     incident_id : int
     reported_at : datetime
 
-    class Config:
-        orm_mode = True
+        
+class User(BaseModel):
+    user_email : EmailStr
+    user_password : str
+
+class User_response(BaseModel):
+    
+    model_config=ConfigDict(from_attributes = True)
+
+    user_id : int
+    created_at : datetime
