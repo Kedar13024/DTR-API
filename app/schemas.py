@@ -31,3 +31,7 @@ class User_response(BaseModel):
 
     user_id : int
     created_at : datetime
+
+class User_login(BaseModel):
+    email : EmailStr
+    password : str

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import incidents, users
+from app.routers import auth, incidents, users
 from app.database import engine
 from app import models 
 
@@ -15,3 +15,4 @@ def home():
 
 app.include_router(incidents.router)
 app.include_router(users.router)
+app.include_router(auth.router)
