@@ -35,3 +35,10 @@ class User_response(BaseModel):
 class User_login(BaseModel):
     email : EmailStr
     password : str
+
+class Token_base(BaseModel):
+    access_token : str
+    token_type : str
+
+class Token_data(BaseModel):
+    user_id : int | None

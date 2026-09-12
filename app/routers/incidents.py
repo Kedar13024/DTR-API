@@ -1,7 +1,8 @@
 from typing import List
 from fastapi import Response , status , HTTPException , Depends , APIRouter
 from app.database import Session, get_db
-from app import models , schemas 
+from app import models , schemas
+from app.routers.oauth2 import get_current_user
 
 router = APIRouter(
     prefix="/incidents" , tags=["Incident"]
@@ -13,7 +14,7 @@ def read_incidents(db : Session = Depends(get_db)):
     return incidents
 
 @router.get("/{incident_id}" , response_model=schemas.IncidentResponse)
-def read_incident(incident_id : int , db : Session = Depends(get_db) ):
+def read_incident(incident_id : int , db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
 
     matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
@@ -24,8 +25,8 @@ def read_incident(incident_id : int , db : Session = Depends(get_db) ):
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db)):
-
+def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
+    
     new_incident = models.Incident(**incident.model_dump())
     db.add(new_incident)
     db.commit()
@@ -34,7 +35,7 @@ def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(ge
 
 
 @router.put("/{incident_id}" ,response_model=schemas.IncidentResponse)
-def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,  db : Session = Depends(get_db)):
+def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
     incident_dict = updated_incident.model_dump()
 
     matching_incident_query = db.query(models.Incident).filter(models.Incident.incident_id == incident_id)
@@ -55,7 +56,7 @@ def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,
     return matching_incident_query.first()
 
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_incident(incident_id: int ,  db : Session = Depends(get_db)):
+def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
     matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
     if not matching_incident:
