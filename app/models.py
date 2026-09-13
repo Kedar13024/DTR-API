@@ -1,4 +1,5 @@
-from sqlalchemy import TIMESTAMP, Boolean, Column, Integer, String , text
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String , text
+from sqlalchemy.orm import relationship
 from .database import Base
 
 class Incident(Base):
@@ -6,9 +7,12 @@ class Incident(Base):
     incident_id = Column(Integer , primary_key=True , nullable=False)
     incident_type = Column(String, nullable=False)
     description = Column(String , nullable=False)
-    severity = Column(String , nullable=False , default="low")
+    severity = Column(String , nullable=False , server_default="low")
     published = Column(Boolean , nullable=False , server_default='TRUE')
     reported_at = Column(TIMESTAMP(timezone=True), nullable=False , server_default=text('now()'))
+    reported_by = Column(Integer , ForeignKey("users.user_id", ondelete="CASCADE") , nullable=False)
+
+    reporter = relationship("User")
 
 class User(Base):
     __tablename__ = "users"

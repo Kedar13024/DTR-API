@@ -27,7 +27,7 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
     
-    new_incident = models.Incident(**incident.model_dump())
+    new_incident = models.Incident(reported_by=current_user.user_id ,**incident.model_dump())
     db.add(new_incident)
     db.commit()
     db.refresh(new_incident)
@@ -48,6 +48,9 @@ def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,
             detail=f"No incident found with id: {incident_id}",
         )
 
+    if incident.reported_by != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN , detail="You do not have permission to update this incident.")
+    
     matching_incident_query.update(
         incident_dict,  synchronize_session=False
     )
@@ -64,6 +67,10 @@ def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No incident found with id: {incident_id}",
         )
+
+    if matching_incident.reported_by != current_user.user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN , detail="You do not have permission to delete this incident.")
+    
     db.delete(matching_incident)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
