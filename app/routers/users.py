@@ -7,7 +7,7 @@ router = APIRouter(
     prefix="/user" , tags=["User"]
 )
 
-@router.post("/", response_model=schemas.User_response, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.User_response, status_code=status.HTTP_201_CREATED)
 def create_user(user : schemas.User , db : Session = Depends(get_db)):
 
     hashed_password = utils.hashed_pass(user.user_password)
@@ -21,7 +21,7 @@ def create_user(user : schemas.User , db : Session = Depends(get_db)):
     return new_user
 
 
-@router.get("/", response_model=List[schemas.User_response])
+@router.get("", response_model=List[schemas.User_response])
 def get_users(db : Session = Depends(get_db)):
     users = db.query(models.User).all()
     return users

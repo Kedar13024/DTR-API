@@ -8,7 +8,7 @@ router = APIRouter(
     prefix="/incidents" , tags=["Incident"]
 )
 
-@router.get("/", response_model=List[schemas.IncidentResponse])
+@router.get("", response_model=List[schemas.IncidentResponse])
 def read_incidents(db : Session = Depends(get_db) , Limit : int = 10 , skip : int = 0 , search : str | None = ""):
     incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(Limit).offset(skip).all()
     return incidents
@@ -24,7 +24,7 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
     return matching_incident
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
     
     new_incident = models.Incident(reported_by=current_user.user_id ,**incident.model_dump())
