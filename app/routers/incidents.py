@@ -9,8 +9,8 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=List[schemas.IncidentResponse])
-def read_incidents(db : Session = Depends(get_db)):
-    incidents = db.query(models.Incident).all()
+def read_incidents(db : Session = Depends(get_db) , Limit : int = 10 , skip : int = 0 , search : str | None = ""):
+    incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(Limit).offset(skip).all()
     return incidents
 
 @router.get("/{incident_id}" , response_model=schemas.IncidentResponse)

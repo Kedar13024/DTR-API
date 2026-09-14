@@ -35,4 +35,4 @@ class Token_base(BaseModel):
     token_type : str
 
 class Token_data(BaseModel):
-    user_id : int | None
+    user_id : int | None = None
