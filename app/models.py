@@ -1,8 +1,23 @@
+"""SQLAlchemy ORM models for incidents and users."""
+
 from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String , text
 from sqlalchemy.orm import relationship
 from .database import Base
 
 class Incident(Base):
+    """Represent an incident reported by a user.
+
+    Attributes:
+        incident_id: Primary key of the incident.
+        incident_type: Category of the incident.
+        description: Details supplied by the reporter.
+        severity: Urgency level of the incident.
+        published: Whether the incident is publicly visible.
+        reported_at: Timestamp when the incident was created.
+        reported_by: ID of the user who reported the incident.
+        reporter: User relationship for the reporting user.
+    """
+
     __tablename__ = "incidents"
     incident_id = Column(Integer , primary_key=True , nullable=False)
     incident_type = Column(String, nullable=False)
@@ -15,8 +30,18 @@ class Incident(Base):
     reporter = relationship("User")
 
 class User(Base):
+    """Represent an application user and their login credentials.
+
+    Attributes:
+        user_id: Primary key of the user.
+        user_email: Email address used to sign in.
+        user_password: Hashed password; never return it in an API response.
+        created_at: Timestamp when the user was created.
+    """
+
     __tablename__ = "users"
     user_id = Column(Integer , primary_key=True , nullable=False)
     user_email = Column(String , nullable=False)
     user_password = Column(String , nullable=False)
     created_at = Column(TIMESTAMP(timezone=True) , nullable=False , server_default=text('now()'))
+

@@ -1,3 +1,5 @@
+"""Endpoints for authenticating users and issuing access tokens."""
+
 from fastapi import status , HTTPException , Depends , APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from app.database import Session, get_db
@@ -11,6 +13,19 @@ router = APIRouter(
 
 @router.post("" , response_model=schemas.Token_base)
 def login(user_credentials :OAuth2PasswordRequestForm = Depends() , db : Session = Depends(get_db)):
+    """Authenticate a user and return a signed JWT.
+
+    Args:
+        user_credentials: Form data containing the user's email and password.
+        db: Database session supplied by FastAPI.
+
+    Returns:
+        dict[str, str]: Access token and its bearer token type.
+
+    Raises:
+        HTTPException: If the submitted credentials are invalid.
+    """
+
 
     user = db.query(models.User).filter(models.User.user_email == user_credentials.username).first()
     
@@ -22,3 +37,4 @@ def login(user_credentials :OAuth2PasswordRequestForm = Depends() , db : Session
 
     access_token = create_access_token(data={"user_id" : user.user_id})
     return {"access_token" : access_token , "token_type" : "bearer"}
+

@@ -1,3 +1,5 @@
+"""Endpoints for creating, reading, updating, and deleting incidents."""
+
 from typing import List
 from fastapi import Response , status , HTTPException , Depends , APIRouter
 from app.database import Session, get_db
@@ -10,11 +12,37 @@ router = APIRouter(
 
 @router.get("", response_model=List[schemas.IncidentResponse])
 def read_incidents(db : Session = Depends(get_db) , Limit : int = 10 , skip : int = 0 , search : str | None = ""):
+    """Return paginated incidents, optionally filtered by severity.
+
+    Args:
+        db: Database session supplied by FastAPI.
+        Limit: Maximum number of incidents to return.
+        skip: Number of incidents to skip.
+        search: Severity text used to filter incidents.
+
+    Returns:
+        list[models.Incident]: Matching incidents.
+    """
+
     incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(Limit).offset(skip).all()
     return incidents
 
 @router.get("/{incident_id}" , response_model=schemas.IncidentResponse)
 def read_incident(incident_id : int , db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
+    """Return one incident for an authenticated user.
+
+    Args:
+        incident_id: ID of the requested incident.
+        db: Database session supplied by FastAPI.
+        current_user: Authenticated user supplied by the security dependency.
+
+    Returns:
+        models.Incident: The matching incident.
+
+    Raises:
+        HTTPException: If no incident has the requested ID.
+    """
+
 
     matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
@@ -26,6 +54,17 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
+    """Create an incident owned by the authenticated user.
+
+    Args:
+        incident: Validated incident creation data.
+        db: Database session supplied by FastAPI.
+        current_user: Authenticated incident reporter.
+
+    Returns:
+        models.Incident: Newly created incident.
+    """
+
     
     new_incident = models.Incident(reported_by=current_user.user_id ,**incident.model_dump())
     db.add(new_incident)
@@ -36,6 +75,21 @@ def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(ge
 
 @router.put("/{incident_id}" ,response_model=schemas.IncidentResponse)
 def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
+    """Replace an incident when it belongs to the authenticated user.
+
+    Args:
+        incident_id: ID of the incident to update.
+        updated_incident: Validated replacement data.
+        db: Database session supplied by FastAPI.
+        current_user: Authenticated user attempting the update.
+
+    Returns:
+        models.Incident: Updated incident.
+
+    Raises:
+        HTTPException: If the incident is missing or belongs to another user.
+    """
+
     incident_dict = updated_incident.model_dump()
 
     matching_incident_query = db.query(models.Incident).filter(models.Incident.incident_id == incident_id)
@@ -60,6 +114,17 @@ def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,
 
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
+    """Delete an incident when it belongs to the authenticated user.
+
+    Args:
+        incident_id: ID of the incident to delete.
+        db: Database session supplied by FastAPI.
+        current_user: Authenticated user attempting the deletion.
+
+    Raises:
+        HTTPException: If the incident is missing or belongs to another user.
+    """
+
     matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
 
     if not matching_incident:
@@ -74,3 +139,4 @@ def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_
     db.delete(matching_incident)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

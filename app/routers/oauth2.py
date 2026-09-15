@@ -1,3 +1,5 @@
+"""JWT creation, validation, and current-user dependencies."""
+
 from fastapi import Depends, HTTPException , status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt , JWTError
@@ -14,6 +16,15 @@ ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 def create_access_token(data : dict):
+    """Create a JWT with an expiration time.
+
+    Args:
+        data: Claims to encode into the token.
+
+    Returns:
+        str: Signed JWT access token.
+    """
+
 
     to_encode = data.copy()
 
@@ -25,6 +36,19 @@ def create_access_token(data : dict):
     return encoded_jwt
 
 def verify_access_token(token : Token_base , credential_exception):
+    """Decode a JWT and extract its authenticated user ID.
+
+    Args:
+        token: JWT access token to validate.
+        credential_exception: Exception raised for an invalid token.
+
+    Returns:
+        Token_data: User data extracted from the valid token.
+
+    Raises:
+        HTTPException: If the token is malformed, expired, or lacks a user ID.
+    """
+
 
     try:
 
@@ -44,6 +68,19 @@ def verify_access_token(token : Token_base , credential_exception):
 
 
 def get_current_user(token : str = Depends(oauth2_scheme) , db : Session = Depends(get_db)):
+    """Retrieve the database user represented by the bearer token.
+
+    Args:
+        token: Bearer token extracted by FastAPI.
+        db: Database session supplied by FastAPI.
+
+    Returns:
+        User: Authenticated user record.
+
+    Raises:
+        HTTPException: If the bearer token is invalid.
+    """
+
     credentials_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED , detail="Could not validiate credentials" , headers={"WWW-Authenticate" : "Bearer"})
 
     token = verify_access_token(token , credentials_exception)
@@ -51,3 +88,4 @@ def get_current_user(token : str = Depends(oauth2_scheme) , db : Session = Depen
     user = db.query(User).filter(User.user_id == token.user_id).first()
 
     return user
+
