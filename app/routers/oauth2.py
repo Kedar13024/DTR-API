@@ -35,7 +35,7 @@ def create_access_token(data : dict):
 
     return encoded_jwt
 
-def verify_access_token(token : Token_base , credential_exception):
+def verify_access_token(token : str , credential_exception):
     """Decode a JWT and extract its authenticated user ID.
 
     Args:
@@ -86,6 +86,8 @@ def get_current_user(token : str = Depends(oauth2_scheme) , db : Session = Depen
     token = verify_access_token(token , credentials_exception)
 
     user = db.query(User).filter(User.user_id == token.user_id).first()
+    if user is None:
+        raise credentials_exception
 
     return user
 

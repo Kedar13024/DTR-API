@@ -1,7 +1,7 @@
 """SQLAlchemy ORM models for incidents and users."""
-
-from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String , text
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, UniqueConstraint , text
 from sqlalchemy.orm import relationship
+
 from .database import Base
 
 class Incident(Base):
@@ -27,7 +27,7 @@ class Incident(Base):
     reported_at = Column(TIMESTAMP(timezone=True), nullable=False , server_default=text('now()'))
     reported_by = Column(Integer , ForeignKey("users.user_id", ondelete="CASCADE") , nullable=False)
 
-    reporter = relationship("User")
+    reporter = relationship("User" , back_populates="incidents")
 
 class User(Base):
     """Represent an application user and their login credentials.
@@ -41,7 +41,21 @@ class User(Base):
 
     __tablename__ = "users"
     user_id = Column(Integer , primary_key=True , nullable=False)
-    user_email = Column(String , nullable=False)
+    user_email = Column(String, unique=True , nullable=False)
     user_password = Column(String , nullable=False)
     created_at = Column(TIMESTAMP(timezone=True) , nullable=False , server_default=text('now()'))
 
+    incidents = relationship("Incident", back_populates="reporter")
+
+class Vote(Base):
+
+    __tablename__ = "votes"
+
+    vote_id = Column(Integer , primary_key=True , nullable=False)
+    incident_id = Column(Integer , ForeignKey("incidents.incident_id" , ondelete="CASCADE"),nullable=False)
+    user_id = Column(Integer ,ForeignKey("users.user_id" , ondelete="CASCADE"),nullable=False)
+    vote_value = Column(Integer , nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('incident_id' , 'user_id' , name='unique_user_incident_vote'),
+    )

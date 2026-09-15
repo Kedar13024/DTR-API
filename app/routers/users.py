@@ -1,3 +1,4 @@
+from sqlalchemy.exc import IntegrityError
 from typing import List
 from fastapi import status , HTTPException , Depends , APIRouter
 from app.database import Session, get_db
@@ -9,26 +10,47 @@ router = APIRouter(
 
 @router.post("", response_model=schemas.User_response, status_code=status.HTTP_201_CREATED)
 def create_user(user : schemas.User , db : Session = Depends(get_db)):
+    """Create a user account after checking whether the email already exists."""
 
-    hashed_password = utils.hashed_pass(user.user_password)
-    user.user_password = hashed_password
-    new_user = models.User(**user.model_dump())
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    existing_user = db.query(models.User).filter(models.User.user_email == user.user_email).first()
+
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists.",
+        )
+
+    new_user = models.User(
+        user_email=user.user_email,
+        user_password=utils.hashed_pass(user.user_password),
+    )
+
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email already exists.",
+        ) from exc
 
     return new_user
 
-
 @router.get("", response_model=List[schemas.User_response])
 def get_users(db : Session = Depends(get_db)):
+    """Return all registered users without exposing password hashes."""
+
     users = db.query(models.User).all()
     return users
 
 
 @router.get("/{user_id}" , response_model=schemas.User_response)
 def get_user(user_id : int , db : Session = Depends(get_db) ):
+    """Return one user by ID or raise a 404 error when it does not exist."""
+
 
     matching_user = db.query(models.User).filter(models.User.user_id == user_id).first()
 

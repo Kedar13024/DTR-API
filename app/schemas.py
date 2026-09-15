@@ -1,6 +1,7 @@
 """Pydantic schemas for API request validation and response serialization."""
 
 from datetime import datetime
+from enum import IntEnum
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 class User(BaseModel):
@@ -38,6 +39,10 @@ class User_response(BaseModel):
     user_id : int
     created_at : datetime
 
+class VoteType(IntEnum):
+    UPVOTE = 1
+    NONE = 0
+    DOWNVOTE = -1
 class Incident_base(BaseModel):
     """Define fields shared by incident request and response schemas.
 
@@ -51,7 +56,7 @@ class Incident_base(BaseModel):
     incident_type : str
     description : str
     severity : str
-    published : bool = True 
+    published : bool = True
 
 class Incident_create(Incident_base):
     """Validate data used to create an incident."""
@@ -75,6 +80,10 @@ class IncidentResponse(Incident_base):
     reported_at : datetime
     reported_by : int
     reporter : User_response
+    upvote_count : int
+    downvote_count : int
+
+    user_current_voteType : VoteType
 
 class Token_base(BaseModel):
     """Serialize an access token returned after successful login.
@@ -95,3 +104,8 @@ class Token_data(BaseModel):
     """
 
     user_id : int | None = None
+
+
+class VoteInput(BaseModel):
+
+    vote_value : VoteType = VoteType.NONE

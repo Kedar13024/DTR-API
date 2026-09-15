@@ -2,6 +2,7 @@
 
 from typing import List
 from fastapi import Response , status , HTTPException , Depends , APIRouter
+from sqlalchemy import func
 from app.database import Session, get_db
 from app import models , schemas
 from app.routers.oauth2 import get_current_user
@@ -10,8 +11,44 @@ router = APIRouter(
     prefix="/incidents" , tags=["Incident"]
 )
 
+def incident_response(db, incident, current_user_id):
+    """Build an incident response with vote totals and the user's vote."""
+
+    upvotes = db.query(func.count(models.Vote.vote_id)).filter(
+        models.Vote.incident_id == incident.incident_id,
+        models.Vote.vote_value == 1,
+    ).scalar() or 0
+
+    downvotes = db.query(func.count(models.Vote.vote_id)).filter(
+        models.Vote.incident_id == incident.incident_id,
+        models.Vote.vote_value == -1,
+    ).scalar() or 0
+
+    current_vote = db.query(models.Vote.vote_value).filter(
+        models.Vote.incident_id == incident.incident_id,
+        models.Vote.user_id == current_user_id,
+    ).scalar()
+
+    return {
+        "incident_id": incident.incident_id,
+        "incident_type": incident.incident_type,
+        "description": incident.description,
+        "severity": incident.severity,
+        "published": incident.published,
+        "reported_at": incident.reported_at,
+        "reported_by": incident.reported_by,
+        "reporter": incident.reporter,
+        "upvote_count": upvotes,
+        "downvote_count": downvotes,
+        "user_current_voteType": (
+            current_vote
+            if current_vote is not None
+            else schemas.VoteType.NONE
+        ),
+    }
+
 @router.get("", response_model=List[schemas.IncidentResponse])
-def read_incidents(db : Session = Depends(get_db) , Limit : int = 10 , skip : int = 0 , search : str | None = ""):
+def read_incidents(db : Session = Depends(get_db) , limit : int = 10 , skip : int = 0 , search : str | None = "" , current_user = Depends(get_current_user)):
     """Return paginated incidents, optionally filtered by severity.
 
     Args:
@@ -24,8 +61,11 @@ def read_incidents(db : Session = Depends(get_db) , Limit : int = 10 , skip : in
         list[models.Incident]: Matching incidents.
     """
 
-    incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(Limit).offset(skip).all()
-    return incidents
+    incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(limit).offset(skip).all()
+    return [
+        incident_response(db, incident, current_user.user_id)
+        for incident in incidents
+    ]
 
 @router.get("/{incident_id}" , response_model=schemas.IncidentResponse)
 def read_incident(incident_id : int , db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
@@ -49,10 +89,12 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
     if not matching_incident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail=f"No incident found with id : {incident_id}")
     
-    return matching_incident
+    return incident_response(
+        db, matching_incident, current_user.user_id,
+    )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("",  response_model=schemas.IncidentResponse,status_code=status.HTTP_201_CREATED)
 def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
     """Create an incident owned by the authenticated user.
 
@@ -70,7 +112,9 @@ def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(ge
     db.add(new_incident)
     db.commit()
     db.refresh(new_incident)
-    return new_incident
+    return incident_response(
+        db, new_incident, current_user.user_id,
+        )
 
 
 @router.put("/{incident_id}" ,response_model=schemas.IncidentResponse)
@@ -110,7 +154,9 @@ def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,
     )
     db.commit()
     db.refresh(incident)
-    return matching_incident_query.first()
+    return incident_response(
+        db, incident, current_user.user_id,
+        )
 
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
@@ -139,4 +185,3 @@ def delete_incident(incident_id: int ,  db : Session = Depends(get_db), current_
     db.delete(matching_incident)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-

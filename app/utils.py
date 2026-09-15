@@ -27,4 +27,3 @@ def verify_pass(password : str , hashedPassword : str):
     """
 
     return pwd_context.verify(password , hashedPassword)
-
