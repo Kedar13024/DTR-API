@@ -5,6 +5,7 @@ description = "Displays disaster/incidents reported by People/Rescue teams sorte
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.20.0",
     "fastapi[standard]>=0.141.1",
     "passlib[argon2]>=1.7.4",
     "psycopg2>=2.9.12",

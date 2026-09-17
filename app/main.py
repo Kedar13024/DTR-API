@@ -1,25 +1,36 @@
 """FastAPI application entry point."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI , Depends
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, incidents, users, vote
-from app.database import engine
-from app import models
-
-models.Base.metadata.create_all(bind=engine)
+from app.routers.oauth2 import get_current_user
 
 app = FastAPI()
 
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "https://www.google.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/")
-def home():
+def home(current_user = Depends(get_current_user)):
     """Return a simple response confirming that the API is running.
 
     Returns:
         dict[str, str]: A welcome message.
     """
 
-    return {"msg":"Welcome!"}
-
+    return {"msg":f"Welcome! {current_user.user_email}"}
 
 app.include_router(incidents.router)
 app.include_router(users.router)

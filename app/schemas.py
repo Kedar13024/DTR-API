@@ -31,12 +31,14 @@ class User_response(BaseModel):
 
     Attributes:
         user_id: Unique user identifier.
+        user_email : User email
         created_at: Timestamp when the user was created.
     """
     
     model_config=ConfigDict(from_attributes = True)
 
     user_id : int
+    user_email : EmailStr
     created_at : datetime
 
 class VoteType(IntEnum):
