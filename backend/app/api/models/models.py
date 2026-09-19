@@ -2,7 +2,7 @@
 from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, UniqueConstraint , text
 from sqlalchemy.orm import relationship
 
-from .database import Base
+from backend.app.api.db.database import Base
 
 class Incident(Base):
     """Represent an incident reported by a user.

@@ -1,8 +1,10 @@
 from sqlalchemy.exc import IntegrityError
 from typing import List
 from fastapi import status , HTTPException , Depends , APIRouter
-from app.database import Session, get_db
-from app import models , schemas , utils
+from backend.app.api.db.database import Session, get_db
+from backend.app.api.models import models
+from backend.app.api.schemas import schemas
+from backend.app.api.services import security
 
 router = APIRouter(
     prefix="/user" , tags=["User"]
@@ -23,7 +25,7 @@ def create_user(user : schemas.User , db : Session = Depends(get_db)):
 
     new_user = models.User(
         user_email=user.user_email,
-        user_password=utils.hashed_pass(user.user_password),
+        user_password=security.hashed_pass(user.user_password),
     )
 
     try:

@@ -5,7 +5,11 @@ build/
 dist/
 wheels/
 *.egg-info
+*.uv-cache/
 
 # Virtual environments
 .venv
 .env
+
+# Temp dir
+tests/

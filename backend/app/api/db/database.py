@@ -2,7 +2,7 @@
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker , Session
-from app.config import settings
+from backend.app.api.core.config import settings
 
 
 SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg2://{settings.database_user}:{settings.database_password}@{settings.database_host}:{settings.database_port}/{settings.database_name}"
@@ -28,4 +28,3 @@ def get_db():
         yield db
     finally:
         db.close()
-

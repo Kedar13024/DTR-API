@@ -1,9 +1,9 @@
 """FastAPI application entry point."""
 
-from fastapi import FastAPI , Depends
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, incidents, users, vote
-from app.routers.oauth2 import get_current_user
+from backend.app.api.v1.endpoints import auth, incidents, users, vote
+from backend.app.api.v1.endpoints.oauth2 import get_current_user
 
 app = FastAPI()
 

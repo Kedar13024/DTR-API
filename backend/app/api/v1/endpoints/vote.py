@@ -1,7 +1,8 @@
 from fastapi import status , HTTPException , Depends , APIRouter
-from app.database import Session, get_db
-from app import models , schemas
-from app.routers.oauth2 import get_current_user
+from backend.app.api.db.database import Session, get_db
+from backend.app.api.models import models
+from backend.app.api.schemas import schemas
+from backend.app.api.v1.endpoints.oauth2 import get_current_user
 
 router = APIRouter(
     prefix="/incidents/{incident_id}/vote" , tags=["Vote"]
