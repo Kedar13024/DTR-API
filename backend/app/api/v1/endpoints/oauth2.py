@@ -7,7 +7,8 @@ from datetime import UTC, timedelta ,datetime
 from backend.app.api.core.config import settings
 from backend.app.api.db.database import Session, get_db
 from backend.app.api.models.models import User
-from backend.app.api.schemas.schemas import Token_data
+from backend.app.api.schemas.token_schema import TokenData
+from backend.app.api.schemas.user_schema import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -43,7 +44,7 @@ def verify_access_token(token : str , credential_exception):
         credential_exception: Exception raised for an invalid token.
 
     Returns:
-        Token_data: User data extracted from the valid token.
+        TokenData: User data extracted from the valid token.
 
     Raises:
         HTTPException: If the token is malformed, expired, or lacks a user ID.
@@ -59,7 +60,7 @@ def verify_access_token(token : str , credential_exception):
         if current_user_id is None:
             raise credential_exception
 
-        token_data = Token_data(user_id=current_user_id)
+        token_data = TokenData(user_id=current_user_id)
 
     except JWTError as exc:
         raise credential_exception from exc
@@ -91,3 +92,7 @@ def get_current_user(token : str = Depends(oauth2_scheme) , db : Session = Depen
 
     return user
 
+def require_admin(current_user : User = Depends(get_current_user)):
+    if current_user.user_role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN , detail="Access denied. Only administrators can perform this action.")
+    return current_user

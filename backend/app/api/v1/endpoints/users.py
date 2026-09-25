@@ -3,15 +3,18 @@ from typing import List
 from fastapi import status , HTTPException , Depends , APIRouter
 from backend.app.api.db.database import Session, get_db
 from backend.app.api.models import models
-from backend.app.api.schemas import schemas
+from backend.app.api.schemas import user_schema
 from backend.app.api.services import security
+from backend.app.api.v1.endpoints.oauth2 import require_admin
 
 router = APIRouter(
     prefix="/user" , tags=["User"]
 )
 
-@router.post("", response_model=schemas.User_response, status_code=status.HTTP_201_CREATED)
-def create_user(user : schemas.User , db : Session = Depends(get_db)):
+
+
+@router.post("", response_model=user_schema.User_response, status_code=status.HTTP_201_CREATED)
+def create_user(user : user_schema.User , db : Session = Depends(get_db)):
     """Create a user account after checking whether the email already exists."""
 
 
@@ -24,6 +27,8 @@ def create_user(user : schemas.User , db : Session = Depends(get_db)):
         )
 
     new_user = models.User(
+        user_fullname =user.user_fullname,
+        user_phoneno=user.user_phoneNo,
         user_email=user.user_email,
         user_password=security.hashed_pass(user.user_password),
     )
@@ -41,15 +46,13 @@ def create_user(user : schemas.User , db : Session = Depends(get_db)):
 
     return new_user
 
-@router.get("", response_model=List[schemas.User_response])
-def get_users(db : Session = Depends(get_db)):
+@router.get("", response_model=List[user_schema.User_response])
+def get_users(_admin=Depends(require_admin), db: Session = Depends(get_db)):
     """Return all registered users without exposing password hashes."""
-
-    users = db.query(models.User).all()
-    return users
+    return db.query(models.User).all()
 
 
-@router.get("/{user_id}" , response_model=schemas.User_response)
+@router.get("/{user_id}" , response_model=user_schema.User_response)
 def get_user(user_id : int , db : Session = Depends(get_db) ):
     """Return one user by ID or raise a 404 error when it does not exist."""
 

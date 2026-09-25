@@ -4,7 +4,7 @@ from fastapi import status , HTTPException , Depends , APIRouter
 from fastapi.security import OAuth2PasswordRequestForm
 from backend.app.api.db.database import Session, get_db
 from backend.app.api.models import models
-from backend.app.api.schemas import schemas
+from backend.app.api.schemas.token_schema import TokenBase
 from backend.app.api.services import security
 from backend.app.api.v1.endpoints.oauth2 import create_access_token
 
@@ -13,7 +13,7 @@ router = APIRouter(
     prefix="/login" , tags=["Authentication"]
 )
 
-@router.post("" , response_model=schemas.Token_base)
+@router.post("", response_model=TokenBase)
 def login(user_credentials :OAuth2PasswordRequestForm = Depends() , db : Session = Depends(get_db)):
     """Authenticate a user and return a signed JWT.
 

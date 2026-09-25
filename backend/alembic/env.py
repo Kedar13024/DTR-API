@@ -1,9 +1,18 @@
 from logging.config import fileConfig
+from pathlib import Path
+import sys
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+
+# Support both `alembic` from backend/ and `alembic -c backend/alembic.ini`
+# from the repository root.
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
 from backend.app.api.core.config import settings
 from backend.app.api.db.database import Base
 

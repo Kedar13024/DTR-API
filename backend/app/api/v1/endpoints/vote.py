@@ -1,7 +1,7 @@
 from fastapi import status , HTTPException , Depends , APIRouter
 from backend.app.api.db.database import Session, get_db
 from backend.app.api.models import models
-from backend.app.api.schemas import schemas
+from backend.app.api.schemas.vote_schema import VoteInput, VoteType
 from backend.app.api.v1.endpoints.oauth2 import get_current_user
 
 router = APIRouter(
@@ -10,7 +10,7 @@ router = APIRouter(
 
 
 @router.post("")
-def vote(incident_id : int, vote : schemas.VoteInput , db : Session = Depends(get_db) , current_user : int = Depends(get_current_user)):
+def vote(incident_id: int, vote: VoteInput, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Create, change, or clear the authenticated user's vote on an incident."""
 
 
@@ -21,7 +21,7 @@ def vote(incident_id : int, vote : schemas.VoteInput , db : Session = Depends(ge
     
     existing_vote = db.query(models.Vote).filter(models.Vote.incident_id == incident_id , models.Vote.user_id == current_user.user_id).first()
 
-    if vote.vote_value == schemas.VoteType.NONE:
+    if vote.vote_value == VoteType.NONE:
         if existing_vote:
             db.delete(existing_vote)
             db.commit()

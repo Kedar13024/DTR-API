@@ -25,7 +25,7 @@ From the repository root, install dependencies and start the API:
 
 ```powershell
 uv sync --project backend
-uv run --project backend fastapi dev backend/app/main.py
+uv run --project backend fastapi dev --app backend.app.main:app
 ```
 
 Apply migrations with:

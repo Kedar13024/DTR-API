@@ -5,7 +5,12 @@ from fastapi import Response , status , HTTPException , Depends , APIRouter
 from sqlalchemy import func
 from backend.app.api.db.database import Session, get_db
 from backend.app.api.models import models
-from backend.app.api.schemas import schemas
+from backend.app.api.schemas.incident_schema import (
+    IncidentCreate,
+    IncidentResponse,
+    IncidentUpdate,
+)
+from backend.app.api.schemas.vote_schema import VoteType
 from backend.app.api.v1.endpoints.oauth2 import get_current_user
 
 router = APIRouter(
@@ -41,14 +46,14 @@ def incident_response(db, incident, current_user_id):
         "reporter": incident.reporter,
         "upvote_count": upvotes,
         "downvote_count": downvotes,
-        "user_current_voteType": (
+        "user_current_vote_type": (
             current_vote
             if current_vote is not None
-            else schemas.VoteType.NONE
+            else VoteType.NONE
         ),
     }
 
-@router.get("", response_model=List[schemas.IncidentResponse])
+@router.get("", response_model=List[IncidentResponse])
 def read_incidents(db : Session = Depends(get_db) , limit : int = 10 , skip : int = 0 , search : str | None = "" , current_user = Depends(get_current_user)):
     """Return paginated incidents, optionally filtered by severity.
 
@@ -62,13 +67,13 @@ def read_incidents(db : Session = Depends(get_db) , limit : int = 10 , skip : in
         list[models.Incident]: Matching incidents.
     """
 
-    incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search)).limit(limit).offset(skip).all()
+    incidents = db.query(models.Incident).filter(models.Incident.severity.contains(search or ""), models.Incident.published.is_(True)).limit(limit).offset(skip).all()
     return [
         incident_response(db, incident, current_user.user_id)
         for incident in incidents
     ]
 
-@router.get("/{incident_id}" , response_model=schemas.IncidentResponse)
+@router.get("/{incident_id}", response_model=IncidentResponse)
 def read_incident(incident_id : int , db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
     """Return one incident for an authenticated user.
 
@@ -85,7 +90,14 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
     """
 
 
-    matching_incident = db.query(models.Incident).filter(models.Incident.incident_id == incident_id).first()
+    matching_incident = (
+        db.query(models.Incident)
+        .filter(
+            models.Incident.incident_id == incident_id,
+            models.Incident.published.is_(True),
+        )
+        .first()
+    )
 
     if not matching_incident:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND , detail=f"No incident found with id : {incident_id}")
@@ -95,8 +107,8 @@ def read_incident(incident_id : int , db : Session = Depends(get_db), current_us
     )
 
 
-@router.post("",  response_model=schemas.IncidentResponse,status_code=status.HTTP_201_CREATED)
-def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(get_db) ,current_user : int = Depends(get_current_user)):
+@router.post("", response_model=IncidentResponse, status_code=status.HTTP_201_CREATED)
+def post_incident(incident: IncidentCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Create an incident owned by the authenticated user.
 
     Args:
@@ -118,8 +130,8 @@ def post_incident(incident: schemas.Incident_create ,  db : Session = Depends(ge
         )
 
 
-@router.put("/{incident_id}" ,response_model=schemas.IncidentResponse)
-def update_incident(incident_id: int, updated_incident: schemas.IncidentUpdate ,  db : Session = Depends(get_db), current_user : int = Depends(get_current_user)):
+@router.put("/{incident_id}", response_model=IncidentResponse)
+def update_incident(incident_id: int, updated_incident: IncidentUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     """Replace an incident when it belongs to the authenticated user.
 
     Args:

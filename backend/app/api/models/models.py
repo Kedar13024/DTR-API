@@ -1,8 +1,20 @@
 """SQLAlchemy ORM models for incidents and users."""
-from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, String, UniqueConstraint , text
+
+from sqlalchemy import (
+    TIMESTAMP,
+    Boolean,
+    Column,
+    Enum as SQLEnum,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import relationship
 
 from backend.app.api.db.database import Base
+from backend.app.api.schemas.user_schema import UserRole
 
 class Incident(Base):
     """Represent an incident reported by a user.
@@ -41,8 +53,19 @@ class User(Base):
 
     __tablename__ = "users"
     user_id = Column(Integer , primary_key=True , nullable=False)
+    user_fullname = Column(String(50) , nullable=False)
+    user_phoneno = Column(String(20) , nullable=False)
     user_email = Column(String, unique=True , nullable=False)
     user_password = Column(String , nullable=False)
+    user_role = Column(
+        SQLEnum(
+            UserRole,
+            name="user_role",
+            values_callable=lambda enum: [role.value for role in enum],
+        ),
+        nullable=False,
+        server_default=UserRole.CITIZEN.value,
+    )
     created_at = Column(TIMESTAMP(timezone=True) , nullable=False , server_default=text('now()'))
 
     incidents = relationship("Incident", back_populates="reporter")
