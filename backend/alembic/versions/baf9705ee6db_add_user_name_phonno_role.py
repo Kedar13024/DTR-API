@@ -19,9 +19,47 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    
+
+    bind = op.get_bind()
     user_role = sa.Enum("citizen", "responder", "admin", name="user_role")
-    user_role.create(op.get_bind(), checkfirst=True)
+
+    # A manually-created legacy enum may already exist with uppercase labels.
+    # Do not let checkfirst silently reuse it: that makes the lowercase
+    # server_default fail when PostgreSQL adds the column.
+    enum_labels = bind.execute(
+        sa.text(
+            "SELECT e.enumlabel "
+            "FROM pg_enum AS e "
+            "JOIN pg_type AS t ON t.oid = e.enumtypid "
+            "JOIN pg_namespace AS n ON n.oid = t.typnamespace "
+            "WHERE t.typname = 'user_role' AND n.nspname = current_schema() "
+            "ORDER BY e.enumsortorder"
+        )
+    ).scalars().all()
+
+    if enum_labels and enum_labels != ["citizen", "responder", "admin"]:
+        dependent_columns = bind.execute(
+            sa.text(
+                "SELECT n.nspname, c.relname, a.attname "
+                "FROM pg_type AS t "
+                "JOIN pg_namespace AS tn ON tn.oid = t.typnamespace "
+                "JOIN pg_attribute AS a ON a.atttypid = t.oid "
+                "JOIN pg_class AS c ON c.oid = a.attrelid "
+                "JOIN pg_namespace AS n ON n.oid = c.relnamespace "
+                "WHERE t.typname = 'user_role' "
+                "AND tn.nspname = current_schema() "
+                "AND a.attnum > 0 AND NOT a.attisdropped"
+            )
+        ).all()
+        if dependent_columns:
+            raise RuntimeError(
+                "Found an incompatible user_role enum used by existing columns: "
+                f"{dependent_columns}. Migrate those columns before retrying."
+            )
+
+        bind.execute(sa.text('DROP TYPE "user_role"'))
+
+    user_role.create(bind, checkfirst=True)
 
     op.add_column(
         "users",
